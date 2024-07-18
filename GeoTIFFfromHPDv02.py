@@ -168,6 +168,7 @@ def compchart(clippedRas,ldsRas):
 
     translateoptions = None
 
+
 def main():  
     
     with open('config.yml', 'r') as file:
@@ -243,3 +244,18 @@ if __name__ == "__main__":
 #copy file to LDS CIFS Drive
 #Clean files
 #Add LDS IDs for updated chart into the Bulkuploadimg config file.
+
+
+# def rncdupcheck(ChartVN, chartname, sheet, user, password,dsn):
+#         connection = oracledb.connect(
+#         user=user,
+#         password=password,
+#         dsn=dsn)
+
+#         cursor = connection.cursor()
+#         return_val = cursor.callfunc("rnc_dup_check", int, [ChartVN, chartname, sheet])
+#         print(return_val)
+
+            # res = [ele for ele, count in Counter(out_data).items() 
+            #                             if count > 1] 
+            # print("All the duplicates from list are : " + str(res))
