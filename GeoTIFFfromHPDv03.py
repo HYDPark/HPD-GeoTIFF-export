@@ -1,6 +1,7 @@
 ## Edition2 for Manual Publishing##########################################
 ## Remove LDS Publishing Module from Edition1
 ## Change Error control -- User notification for data duplication and fixing
+## Add Chart style control 
 ###########################################################################
 # Required
 # Caris HPD PaperChartBuilder License 
@@ -17,6 +18,7 @@ from collections import Counter
 import yaml
 import time
 
+os.unsetenv('PROJ_LIB')
 gdal.UseExceptions()
 
 Save = 'C:\\Temp\\chart\\'
@@ -113,6 +115,41 @@ def getrncpoly(pline):
     poly = geometry.Polygon([[p[0], p[1]] for p in clist]) 
     return poly
 
+def putchartstyle(ChartVN, style, user, password,dsn):
+
+        connection = oracledb.connect(
+        user=user,
+        password=password,
+        dsn=dsn)
+
+        cursor = connection.cursor()
+
+        sql = """
+        UPDATE chart_version_attribute SET CHARVAL = :c_style where chartver_chartver_id = :c_id and attributeclass_id = 1117
+        """
+        cursor.execute(sql, c_style = style, c_id = ChartVN)
+        connection.commit()
+        connection.close()    
+
+def getchartstyle(ChartVN,user, password,dsn):
+
+        connection = oracledb.connect(
+        user=user,
+        password=password,
+        dsn=dsn)
+
+        cursor = connection.cursor()
+
+        sql = """
+        select CHARVAL from chart_version_attribute where chartver_chartver_id = :c_id and attributeclass_id = 1117
+        """
+        cursor.execute(sql, c_id = ChartVN)
+        out_data = cursor.fetchall()
+        for i in out_data:
+             cstyle = i[0]
+        connection.close()    
+        return cstyle
+
 def rncfromhpd(chartname,user, password,dsn):
 
         connection = oracledb.connect(
@@ -145,9 +182,9 @@ def main():
         user = HPDConnection['HPDConnection']['User']
         password = HPDConnection['HPDConnection']['PW']
         dsn = HPDConnection['HPDConnection']['dsn'] +':'+ HPDConnection['HPDConnection']['port'] +'/'+ HPDConnection['HPDConnection']['DBname']
-        Dbname = HPDConnection['HPDConnection']['DBname']    
-            
+        Dbname = HPDConnection['HPDConnection']['DBname']     
         Charts = HPDConnection['Datasets']['Charts']
+
         for chart in Charts:
             chartname = chart
             print("Data export for Chart " + chartname)
@@ -167,9 +204,10 @@ def main():
                  clippedRas = Save + ChartVN + "_" + ChartN + "_" + sheet +"_c.tif"
                  clayer = ChartVN +"_"+ ChartN + "_" + sheet
                  ldsRas = Save + ChartN + sheetn +".tif"
+                
 
             
-                 # Uncertified(Duplicated) data check
+                # Uncertified(Duplicated) data check
                  if count >1:
                     print("Chart " + ChartN +" ID"+ChartVN+" and Panel Number "+ sheet +" has "+ str(count -1) +" duplicate Rnc Panel data," "\n" "Check HPD Paper Chart Editor for uncertified deletion.")
                     print("\n")
@@ -184,7 +222,19 @@ def main():
                         print("\n")
                     
                     else:
-                        # print(ele)
+                        # Current chart style check
+                        updatechk = 0
+                        chtstyle = getchartstyle(ChartVN,user,password,dsn)
+
+                        print("Current Chart style set: "+chtstyle)
+
+                        bsbstyle = "LINZ_BSB-v3.0"
+                        if chtstyle != bsbstyle:
+                              style = bsbstyle
+                              putchartstyle(ChartVN,style,user,password,dsn)
+                              updatechk = 1
+                              print("Chart Style updated as LINZ_BSB-v3.0")
+
                         poly = getrncpoly(pline)
                         if os.path.exists(polyshp):  
                             cshp = cleanshp(shpdir)
@@ -205,7 +255,11 @@ def main():
                 
                         else:
                             print("GeoTIFF Export Error")
-                
+
+                        if updatechk == 1 :
+                            style = chtstyle
+                            putchartstyle(ChartVN,style,user,password,dsn)
+                            print("Chart Style returned as " + style)
 
                     if os.path.exists(polyshp):
                         cshp = cleanshp(shpdir)
